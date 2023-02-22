@@ -29,5 +29,26 @@ def handle(client):
             clients.remove(client)
             client.close()
             nick_name = nick_names[index]
+            broad_cast(f"f {nick_name} left the chat".encode('ascii'))
             nick_names.remove(nick_name)
+            break
 
+def receive():
+    while True:
+        client ,address = server.accept()
+        print(f'Connected with {str(address)}')
+
+        client.send("Nick".encode('ascii'))
+        nick_name = client.recv(1024).decode('ascii')
+        nick_names.append(nick_name)
+        clients.append(client)
+
+        print(f"Nickname of the client is {nick_name}")
+        broad_cast(f" {nick_name} joined the chat ".encode('ascii'))
+        client.send("Connected to the server!" .encode('ascii'))
+
+        thread = threading.Thread(target=handle,args=(client,))
+        thread.start()
+
+print("Server is  listening...")
+receive()
