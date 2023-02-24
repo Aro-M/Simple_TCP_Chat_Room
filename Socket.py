@@ -1,4 +1,4 @@
-import socket
+import Socket
 import asyncio
 
 class Socket:

@@ -1,4 +1,4 @@
-import socket
+import Socket
 import  threading
 
 nickname = input("Choose a nickname  ")

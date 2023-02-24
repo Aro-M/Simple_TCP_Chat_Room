@@ -1,54 +1,51 @@
-import socket
-import threading
-
-c_host = '127.0.0.1'  #localhost
-c_port = 55555      # port
-
-# Now you will ask, did I write like this?
-# Because they are constant objects
-
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind((c_host, c_port))
-server.listen()
-
-clients = []
-nick_names = []
+import settings
+from Socket import Socket
+from exceptions import SocketException
 
 
-def broad_cast(message):
-    for client in clients:
-        client.send(message)
+class Server(Socket):
+    def __init__(self):
+        super(Server, self).__init__()
+        self.users = []
 
-def handle(client):
-    while True:
-        try:
-            message = client.recv(1024)
-            broad_cast(message)
-        except:
-            index = clients.index(client)
-            clients.remove(client)
-            client.close()
-            nick_name = nick_names[index]
-            broad_cast(f"f {nick_name} left the chat".encode('ascii'))
-            nick_names.remove(nick_name)
-            break
+    def set_up(self):
+        self.socket.bind(settings.SERVER_ADDRESS)
 
-def receive():
-    while True:
-        client ,address = server.accept()
-        print(f'Connected with {str(address)}')
+        self.socket.listen(5)
+        self.socket.setblocking(False)
+        print("Server is listening")
 
-        client.send("Nick".encode('ascii'))
-        nick_name = client.recv(1024).decode('ascii')
-        nick_names.append(nick_name)
-        clients.append(client)
+    async def send_data(self, **kwargs):
+        for user in self.users:
+            try:
+                await super(Server, self).send_data(where=user, data=kwargs['data'])
+            except SocketException as exc:
+                print(exc)
+                user.close()
 
-        print(f"Nickname of the client is {nick_name}")
-        broad_cast(f" {nick_name} joined the chat ".encode('ascii'))
-        client.send("Connected to the server!" .encode('ascii'))
+    async def listen_socket(self, listened_socket=None):
+        while True:
+            try:
+                data = await super(Server, self).listen_socket(listened_socket)
+                await self.send_data(data=data['data'])
+            except SocketException as exc:
+                print(exc)
+                listened_socket.close()
 
-        thread = threading.Thread(target=handle,args=(client,))
-        thread.start()
+    async def accept_sockets(self):
+        while True:
+            user_socket, address = await self.main_loop.sock_accept(self.socket)
+            print(f"User <{address[0]}> connected!")
 
-print("Server is  listening...")
-receive()
+            self.users.append(user_socket)
+            self.main_loop.create_task(self.listen_socket(user_socket))
+
+    async def main(self):
+        await self.main_loop.create_task(self.accept_sockets())
+
+
+if __name__ == '__main__':
+    server = Server()
+    server.set_up()
+
+    server.start()
