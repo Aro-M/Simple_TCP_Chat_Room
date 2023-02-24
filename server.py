@@ -34,14 +34,14 @@ class Server(Socket):
 
     async def accept_sockets(self):
         while True:
-            user_socket, address = await self.main_loop.sock_accept(self.socket)
+            user_socket, address = await self.generel_loop.sock_accept(self.socket)
             print(f"User <{address[0]}> connected!")
 
             self.users.append(user_socket)
-            self.main_loop.create_task(self.listen_socket(user_socket))
+            self.generel_loop.create_task(self.listen_socket(user_socket))
 
     async def main(self):
-        await self.main_loop.create_task(self.accept_sockets())
+        await self.generel_loop.create_task(self.accept_sockets())
 
 
 if __name__ == '__main__':
